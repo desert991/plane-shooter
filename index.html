@@ -73,12 +73,20 @@ const ctx = canvas.getContext('2d');
 const W = 800, H = 650, HUD_H = 40, PLAY_TOP = HUD_H, PLAY_BOT = H;
 canvas.width = W; canvas.height = H;
 // Scale for smaller screens
+let SCALE = 1;
 function resize(){
-  const maxW = window.innerWidth - 20, maxH = window.innerHeight - 20;
-  const scale = Math.min(1, Math.min(maxW/W, maxH/H));
-  canvas.style.width = (W*scale)+'px';
-  canvas.style.height = (H*scale)+'px';
+  const wrapper = document.getElementById("game-wrapper");
+  const maxW = document.documentElement.clientWidth - 8;
+  const maxH = document.documentElement.clientHeight - 8;
+  const s = Math.min(1, Math.min(maxW/W, maxH/H));
+  SCALE = s;
+  const cw = Math.floor(W * s), ch = Math.floor(H * s);
+  canvas.style.width = cw + "px";
+  canvas.style.height = ch + "px";
+  wrapper.style.width = cw + "px";
+  wrapper.style.height = ch + "px";
 }
+function fz(px){ return Math.round(px * SCALE) || 1; }
 window.addEventListener('resize', resize); resize();
 
 // ─── Constants ─────────────────────────────────────────────
@@ -494,7 +502,7 @@ function drawPowerup(x, y, type, pulse, rotation){
   ctx.save();
   ctx.translate(x, y);
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px "Courier New",monospace';
+  ctx.font = 'bold '+fz(14)+'px '+'"Courier New",monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(type, 0, 0);
@@ -946,7 +954,7 @@ function draw(){
 
   // HUD Text
   ctx.fillStyle = COLORS.hudText;
-  ctx.font = 'bold 14px "Courier New",monospace';
+  ctx.font = 'bold '+fz(14)+'px '+'"Courier New",monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(`SCORE: ${G.score}`, 20, HUD_H/2);
@@ -962,7 +970,7 @@ function draw(){
   // Shield indicator
   if(G.shield){
     ctx.fillStyle = COLORS.shield;
-    ctx.font = 'bold 9px "Courier New",monospace';
+    ctx.font = 'bold '+fz(9)+'px '+'"Courier New",monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`SHIELD ${Math.ceil(G.shieldTimer/1000)}s`, W/2, HUD_H-5);
   }
@@ -970,7 +978,7 @@ function draw(){
   // Power indicator
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffaa44';
-  ctx.font = 'bold 9px "Courier New",monospace';
+  ctx.font = 'bold '+fz(9)+'px '+'"Courier New",monospace';
   const pwr = '█'.repeat(G.powerLevel) + '░'.repeat(MAX_POWER-G.powerLevel);
   ctx.fillText(`POWER: ${pwr}`, 20, HUD_H-5);
 
@@ -1032,7 +1040,7 @@ function draw(){
     const alpha = ft.life/ft.maxLife;
     ctx.globalAlpha = alpha;
     ctx.fillStyle = ft.color;
-    ctx.font = 'bold 10px "Courier New",monospace';
+    ctx.font = 'bold '+fz(10)+'px '+'"Courier New",monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(ft.text, ft.x, ft.y);
@@ -1051,25 +1059,25 @@ function drawMenu(){
 
   const cx=W/2, cy=H/3;
   ctx.fillStyle = COLORS.player;
-  ctx.font = 'bold 36px "Helvetica",sans-serif';
+  ctx.font = 'bold '+fz(36)+'px '+'"Helvetica",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('✈ 飞机大战', cx, cy-40);
 
   ctx.fillStyle = '#667799';
-  ctx.font = '14px "Courier New",monospace';
+  ctx.font = fz(14)+'px '+'"Courier New",monospace';
   ctx.fillText('AIRPLANE SHOOTER', cx, cy+20);
 
   ctx.fillStyle = COLORS.hudText;
-  ctx.font = 'bold 16px "Courier New",monospace';
+  ctx.font = 'bold '+fz(16)+'px '+'"Courier New",monospace';
   ctx.fillText('PRESS SPACE TO START', cx, cy+70);
 
   ctx.fillStyle = '#556688';
-  ctx.font = '10px "Courier New",monospace';
+  ctx.font = fz(10)+'px '+'"Courier New",monospace';
   ctx.fillText('← → ↑ ↓ / WASD  Move    Auto-fire    Space/P  Pause', cx, cy+110);
 
   ctx.fillStyle = '#ffcc44';
-  ctx.font = 'bold 12px "Courier New",monospace';
+  ctx.font = 'bold '+fz(12)+'px '+'"Courier New",monospace';
   ctx.fillText(`HIGH SCORE: ${G.highScore}`, cx, cy+150);
 
   // Draw a demo enemy plane floating
@@ -1084,27 +1092,27 @@ function drawGameOver(){
 
   const cx=W/2, cy=H/3;
   ctx.fillStyle = '#ff3344';
-  ctx.font = 'bold 32px "Helvetica",sans-serif';
+  ctx.font = 'bold '+fz(32)+'px '+'"Helvetica",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('GAME OVER', cx, cy-40);
 
   ctx.fillStyle = COLORS.hudText;
-  ctx.font = 'bold 18px "Courier New",monospace';
+  ctx.font = 'bold '+fz(18)+'px '+'"Courier New",monospace';
   ctx.fillText(`SCORE: ${G.score}`, cx, cy+10);
 
   if(G.score===G.highScore && G.score>0){
     ctx.fillStyle = '#ffcc44';
-    ctx.font = 'bold 14px "Courier New",monospace';
+    ctx.font = 'bold '+fz(14)+'px '+'"Courier New",monospace';
     ctx.fillText('★ NEW HIGH SCORE! ★', cx, cy+50);
   }
 
   ctx.fillStyle = '#888899';
-  ctx.font = 'bold 12px "Courier New",monospace';
+  ctx.font = 'bold '+fz(12)+'px '+'"Courier New",monospace';
   ctx.fillText(`HIGH SCORE: ${G.highScore}`, cx, cy+90);
 
   ctx.fillStyle = COLORS.hudText;
-  ctx.font = 'bold 14px "Courier New",monospace';
+  ctx.font = 'bold '+fz(14)+'px '+'"Courier New",monospace';
   ctx.fillText('PRESS SPACE TO CONTINUE', cx, cy+140);
 }
 
@@ -1114,13 +1122,13 @@ function drawPaused(){
 
   const cx=W/2, cy=H/2;
   ctx.fillStyle = COLORS.hudText;
-  ctx.font = 'bold 24px "Helvetica",sans-serif';
+  ctx.font = 'bold '+fz(24)+'px '+'"Helvetica",sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('PAUSED', cx, cy-10);
 
   ctx.fillStyle = '#667788';
-  ctx.font = '12px "Courier New",monospace';
+  ctx.font = fz(12)+'px '+'"Courier New",monospace';
   ctx.fillText('Press P or Space to resume', cx, cy+25);
 }
 
