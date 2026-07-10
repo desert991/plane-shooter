@@ -269,7 +269,7 @@ class AirplaneGame:
         )
         self.canvas.create_text(
             cx, cy + 110,
-            text="← → ↑ ↓ / WASD  Move    Space  Fire    P  Pause",
+            text="← → ↑ ↓ / WASD  Move    Auto-fire    P  Pause",
             fill="#556688",
             font=("Courier", 10),
             tags="overlay"
@@ -488,7 +488,7 @@ class AirplaneGame:
             body.extend([x - 10, y + 10, x - 24, y + 4, x - 10, y + 14])
 
         cid = self.canvas.create_polygon(
-            body, fill=color, outline="#ffffff44",
+            body, fill=color, outline="#ffffff",
             width=1, tags="player"
         )
         self.player["canvas_id"] = cid
@@ -638,14 +638,14 @@ class AirplaneGame:
                 ])
 
         cid = self.canvas.create_polygon(
-            points_list, fill=color, outline="#ffffff22",
+            points_list, fill=color, outline="#cccccc",
             width=1, tags="enemy"
         )
 
         inner_cid = None
         if etype == "boss":
             inner_cid = self.canvas.create_polygon(
-                inner_pts, fill="#ffffff22", outline="",
+                inner_pts, fill="#cccccc", outline="",
                 tags="enemy"
             )
 
@@ -685,7 +685,7 @@ class AirplaneGame:
 
         cid = self.canvas.create_oval(
             x - 10, y - 10, x + 10, y + 10,
-            fill=color, outline="#ffffff44",
+            fill=color, outline="#ffffff",
             width=2, tags="powerup"
         )
         # Label
@@ -978,12 +978,11 @@ class AirplaneGame:
             if self.player["hit_flash"] > 0:
                 self.player["hit_flash"] -= 1
 
-            # Auto-fire
-            if "space" in self.keys_pressed:
-                self._fire_timer += 33
-                if self._fire_timer >= BASE_FIRE_DELAY // self.power_level:
-                    self._fire_timer = 0
-                    self._fire_bullets()
+            # Auto-fire (always on)
+            self._fire_timer += 33
+            if self._fire_timer >= BASE_FIRE_DELAY // self.power_level:
+                self._fire_timer = 0
+                self._fire_bullets()
 
             # Redraw player
             self._draw_player()
