@@ -61,3 +61,5 @@ This project is designed to practice GitHub workflows:
 3. Create branches for experimentation
 4. Push to GitHub remote
 5. Manage Pull Requests and Issues
+
+🎮 GitHub 仓库: [desert991/plane-shooter](https://github.com/desert991/plane-shooter)
