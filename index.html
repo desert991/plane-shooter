@@ -70,33 +70,32 @@ canvas{touch-action:none}
 // ─── Canvas Setup ──────────────────────────────────────────
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const W = 800, H = 650, HUD_H = 40, PLAY_TOP = HUD_H, PLAY_BOT = H;
+let W = 800, H = 650, HUD_H = 40, PLAY_TOP = 40, PLAY_BOT = 650;
+let SZ = 1;
+let PLAYER_SPEED = 8;
+let BULLET_SPEED = 42;
 canvas.width = W; canvas.height = H;
 // Scale for smaller screens
-let SCALE = 1;
-let VISIBLE_LEFT = 0, VISIBLE_RIGHT = W;
 function resize(){
   const wrapper = document.getElementById("game-wrapper");
   const maxW = document.documentElement.clientWidth - 8;
   const maxH = document.documentElement.clientHeight - 8;
-  let s = maxH / H;
-  s = Math.min(s, 1.5);
-  SCALE = s;
-  const cw = Math.floor(W * s), ch = Math.floor(H * s);
-  canvas.style.width = cw + "px";
-  canvas.style.height = ch + "px";
-  wrapper.style.width = cw + "px";
-  wrapper.style.height = ch + "px";
-  const visibleW = maxW / s;
-  VISIBLE_LEFT = Math.max(0, Math.floor((W - visibleW) / 2));
-  VISIBLE_RIGHT = Math.min(W, Math.ceil(W - VISIBLE_LEFT));
+  W = maxW; H = maxH;
+  canvas.width = W; canvas.height = H;
+  SZ = Math.min(1, Math.min(W/800, H/650));
+  HUD_H = Math.max(28, Math.round(40 * SZ));
+  PLAY_TOP = HUD_H; PLAY_BOT = H;
+  PLAYER_SPEED = Math.max(3, Math.round(8 * SZ));
+  BULLET_SPEED = Math.max(12, Math.round(42 * SZ));
+  wrapper.style.width = W + "px";
+  wrapper.style.height = H + "px";
 }
-function fz(px){ var fs = Math.round(px / SCALE); return fs > 1 ? fs : 1; }
+// Font scaling: ensure readable text at any canvas size
+function fz(px){
+  const s = Math.round(px * (W / 800) * 0.7);
+  return Math.max(s, Math.round(px * 0.7));
+}
 window.addEventListener('resize', resize); resize();
-
-// ─── Constants ─────────────────────────────────────────────
-const PLAYER_SPEED = 8;
-const BULLET_SPEED = 42;
 const BASE_FIRE_DELAY = 250;
 const MAX_POWER = 3;
 const INITIAL_LIVES = 3;
@@ -609,13 +608,13 @@ function spawnEnemy(){
   else if(roll < 0.8) etype = 'fast';
   else etype = 'tank';
 
-  const x = VISIBLE_LEFT + 20 + Math.random() * (VISIBLE_RIGHT - VISIBLE_LEFT - 40);
-  let speed = 1.5 + diff*0.3 + Math.random()*0.6-0.3;
+  const x = 40 + Math.random()*(W-80);
+  let speed = (1.5 + diff*0.3 + Math.random()*0.6-0.3) * (H/650);
   let hp, points, size, color;
 
-  if(etype==='basic'){ hp=1; points=100; size=16; color=COLORS.enemyBasic; }
-  else if(etype==='fast'){ hp=1; points=150; speed*=1.4; size=14; color=COLORS.enemyFast; }
-  else{ hp=2; points=250; size=20; color=COLORS.enemyTank; }
+  if(etype==='basic'){ hp=1; points=100; size=Math.round(16*SZ); color=COLORS.enemyBasic; }
+  else if(etype==='fast'){ hp=1; points=150; speed*=1.4; size=Math.round(14*SZ); color=COLORS.enemyFast; }
+  else{ hp=2; points=250; size=Math.round(20*SZ); color=COLORS.enemyTank; }
 
   const enemy = {
     x, y: -size, vx:0, vy:speed, hp, maxHp:hp, points, size, type:etype, color,
@@ -631,8 +630,8 @@ function spawnEnemy(){
 function spawnBoss(){
   const hp = 5 + G.difficulty*2;
   const points = 1000 + G.difficulty*200;
-  const size = 30;
-  const speed = 1.0 + G.difficulty*0.2;
+  const size = Math.round(30*SZ);
+  const speed = (1.0 + G.difficulty*0.2) * (H/650);
   G.enemies.push({
     x: W/2, y: -size, vx:1.5, vy:speed*0.3,
     hp, maxHp:hp, points, size, type:'boss', color:COLORS.enemyBoss,
@@ -832,7 +831,7 @@ function update(){
     if(dx!==0 && dy!==0){
       dx *= 0.707; dy *= 0.707;
     }
-    G.player.x = Math.max(VISIBLE_LEFT+20, Math.min(VISIBLE_RIGHT-20, G.player.x+dx));
+    G.player.x = Math.max(20, Math.min(W-20, G.player.x+dx));
     G.player.y = Math.max(PLAY_TOP+10, Math.min(H-20, G.player.y+dy));
 
     // Touch movement (mobile)
@@ -844,7 +843,7 @@ function update(){
         const tstep = Math.min(tdist, PLAYER_SPEED);
         G.player.x += tdx/tdist * tstep;
         G.player.y += tdy/tdist * tstep;
-        G.player.x = Math.max(VISIBLE_LEFT+20, Math.min(VISIBLE_RIGHT-20, G.player.x));
+        G.player.x = Math.max(20, Math.min(W-20, G.player.x));
         G.player.y = Math.max(PLAY_TOP+10, Math.min(H-20, G.player.y));
       }
     }
@@ -889,7 +888,7 @@ function update(){
       e.y += e.vy;
     }else if(e.type==='boss'){
       e.x += e.vx; e.y += e.vy;
-      if(e.x<VISIBLE_LEFT+40||e.x>VISIBLE_RIGHT-40) e.vx*=-1;
+      if(e.x<40||e.x>W-40) e.vx*=-1;
     }else{
       e.y += e.vy;
     }
@@ -1016,7 +1015,7 @@ function draw(){
     const flash = G.player.hitFlash>0;
     if(!inv || Math.floor(G.player.invincible/100)%2===0){
       const color = flash ? COLORS.playerHit : COLORS.player;
-      drawPlayerPlane(G.player.x, G.player.y, 18, color, G.powerLevel, G.shield);
+      drawPlayerPlane(G.player.x, G.player.y, Math.round(18*SZ), color, G.powerLevel, G.shield);
     }
   }
 
