@@ -86,7 +86,7 @@ function resize(){
   wrapper.style.width = cw + "px";
   wrapper.style.height = ch + "px";
 }
-function fz(px){ return Math.round(px * SCALE) || 1; }
+function fz(px){ var fs = Math.round(px / SCALE); return fs > 1 ? fs : 1; }
 window.addEventListener('resize', resize); resize();
 
 // ─── Constants ─────────────────────────────────────────────
