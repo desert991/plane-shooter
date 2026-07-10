@@ -29,10 +29,43 @@ canvas{
 }
 /* Prevent double-tap zoom on mobile */
 canvas{touch-action:none}
+#pause-btn{
+  position:absolute;
+  top:5px;
+  right:8px;
+  z-index:10;
+  width:36px;height:36px;
+  background:rgba(20,24,56,0.85);
+  color:#fff;
+  border:1px solid #2a2e48;
+  border-radius:6px;
+  font-size:20px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  line-height:1;
+}
+#pause-btn:active{background:rgba(40,48,100,0.9)}
+#touch-hint{
+  display:none;
+  position:absolute;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:10;
+  color:rgba(255,255,255,0.4);
+  font-size:11px;
+  font-family:'Courier New',monospace;
+  text-align:center;
+  pointer-events:none;
+}
 </style>
 </head>
 <body>
-<div id="game-wrapper"><canvas id="game"></canvas></div>
+<div id="game-wrapper"><canvas id="game"></canvas><button id="pause-btn">⏸</button><div id="touch-hint">Touch &amp; drag to move</div></div>
 <script>
 // ─── Canvas Setup ──────────────────────────────────────────
 const canvas = document.getElementById('game');
@@ -789,6 +822,20 @@ function update(){
     G.player.x = Math.max(20, Math.min(W-20, G.player.x+dx));
     G.player.y = Math.max(PLAY_TOP+10, Math.min(H-20, G.player.y+dy));
 
+    // Touch movement (mobile)
+    if(G.player.tx !== null && G.player.ty !== null){
+      const tdx = G.player.tx - G.player.x;
+      const tdy = G.player.ty - G.player.y;
+      const tdist = Math.sqrt(tdx*tdx + tdy*tdy);
+      if(tdist > 5){
+        const tstep = Math.min(tdist, PLAYER_SPEED);
+        G.player.x += tdx/tdist * tstep;
+        G.player.y += tdy/tdist * tstep;
+        G.player.x = Math.max(20, Math.min(W-20, G.player.x));
+        G.player.y = Math.max(PLAY_TOP+10, Math.min(H-20, G.player.y));
+      }
+    }
+
     if(G.player.invincible>0) G.player.invincible -= dt;
     if(G.player.hitFlash>0) G.player.hitFlash -= 1;
 
@@ -1115,6 +1162,48 @@ document.addEventListener('keydown', (e)=>{
 });
 document.addEventListener('keyup', (e)=>{ G.keys[e.key]=false; });
 
+// ─── Touch / Mobile Controls ───────────────────────────────
+let touchActive = false;
+function handleTouchPos(evt){
+  if(!evt.touches||evt.touches.length===0) return null;
+  const rect = canvas.getBoundingClientRect();
+  const sx = W/rect.width, sy = H/rect.height;
+  const t = evt.touches[0];
+  return {x:(t.clientX-rect.left)*sx, y:(t.clientY-rect.top)*sy, isPause:(rect.right-t.clientX<50&&t.clientY-rect.top<50)};
+}
+canvas.addEventListener("touchstart", (e)=>{
+  e.preventDefault();
+  const p = handleTouchPos(e); if(!p) return;
+  if(G.state==="menu"||G.state==="game_over"){
+    G.state==="menu"?startGame():goToMenu();
+    return;
+  }
+  if(p.isPause){
+    G.state=(G.state==="playing")?"paused":"playing";
+    return;
+  }
+  touchActive = true;
+  if(G.player&&G.state==="playing"){G.player.tx=p.x; G.player.ty=p.y;}
+  const hint = document.getElementById("touch-hint");
+  if(hint){hint.style.display="block"; setTimeout(()=>{hint.style.display="none";},3000);}
+},{passive:false});
+canvas.addEventListener("touchmove", (e)=>{
+  e.preventDefault();
+  if(!touchActive||!G.player||G.state!=="playing") return;
+  const p = handleTouchPos(e); if(!p) return;
+  G.player.tx=p.x; G.player.ty=p.y;
+},{passive:false});
+canvas.addEventListener("touchend",(e)=>{
+  e.preventDefault();
+  touchActive = false;
+  if(G.player){G.player.tx=null;G.player.ty=null;}
+},{passive:false});
+document.getElementById("pause-btn").addEventListener("click",(e)=>{
+  e.stopPropagation();
+  if(G.state==="playing") G.state="paused";
+  else if(G.state==="paused") G.state="playing";
+});
+
 // Start / Reset
 function startGame(){
   G.state='playing';
@@ -1127,7 +1216,7 @@ function startGame(){
   G.bullets=[]; G.enemyBullets=[]; G.enemies=[]; G.powerups=[];
   G.explosions=[]; G.floatTexts=[];
 
-  G.player = {x:W/2, y:H-60, invincible:0, hitFlash:0};
+  G.player = {x:W/2, y:H-60, invincible:0, hitFlash:0, tx:null, ty:null};
   createStars();
 
   initAudio();
