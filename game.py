@@ -403,6 +403,7 @@ class AirplaneGame:
 
     def _resume(self):
         self._clear_overlays()
+        self.keys_pressed.clear()
         self.state = "playing"
         self._game_loop()
 
