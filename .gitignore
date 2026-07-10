@@ -18,3 +18,6 @@ build/
 # IDE
 .idea/
 .vscode/
+# Build artifacts
+*.spec
+*.app

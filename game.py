@@ -11,6 +11,10 @@ import math
 import random
 import os
 import json
+try:
+    import soundfx
+except ImportError:
+    soundfx = None
 
 # ─── Constants ───────────────────────────────────────────────
 
@@ -36,8 +40,8 @@ STAR_COLOR = "#ffffff"
 SHIELD_COLOR = "#44aaff"
 
 # Game settings
-PLAYER_SPEED = 5
-BULLET_SPEED = 8
+PLAYER_SPEED = 8
+BULLET_SPEED = 42
 BASE_FIRE_DELAY = 250  # ms
 MAX_POWER_LEVEL = 3
 INITIAL_LIVES = 3
@@ -100,6 +104,7 @@ class AirplaneGame:
 
         # Keyboard state
         self.keys_pressed = set()
+        if soundfx: soundfx.init()
 
         # Timers
         self._fire_timer = 0
@@ -162,15 +167,13 @@ class AirplaneGame:
             if key == "space" or key == "Return":
                 self._show_menu()
         elif self.state == "playing":
-            if key == "p" or key == "P":
+            if key == "p" or key == "P" or key == "space":
                 self._pause()
         elif self.state == "paused":
             if key == "p" or key == "P" or key == "r" or key == "R":
                 self._resume()
 
-        # Fire on key press (auto-fire in game loop)
-        if key == "space":
-            self._fire_timer = BASE_FIRE_DELAY  # fire immediately
+
 
     def _on_key_up(self, event):
         key = event.keysym
@@ -269,7 +272,7 @@ class AirplaneGame:
         )
         self.canvas.create_text(
             cx, cy + 110,
-            text="← → ↑ ↓ / WASD  Move    Auto-fire    P  Pause",
+            text="← → ↑ ↓ / WASD  Move    Auto-fire    Space/P  Pause",
             fill="#556688",
             font=("Courier", 10),
             tags="overlay"
@@ -293,6 +296,7 @@ class AirplaneGame:
         self.root.after(33, self._menu_animate)
 
     def _show_game_over(self):
+        soundfx and soundfx.stop_music()
         self._clear_overlays()
         self.state = "game_over"
 
@@ -382,6 +386,7 @@ class AirplaneGame:
         self._update_hud()
 
         # Start game loop
+        soundfx and soundfx.start_music()
         self._game_loop()
 
     def _pause(self):
@@ -446,8 +451,9 @@ class AirplaneGame:
     # ── Player Drawing ──────────────────────────────────────
 
     def _draw_player(self):
-        if self.player["canvas_id"]:
-            self.canvas.delete(self.player["canvas_id"])
+        # Delete all previous player items (plane body + shield)
+        self.canvas.delete("player")
+        self.player["canvas_id"] = None
 
         x, y = self.player["x"], self.player["y"]
         level = self.power_level
@@ -506,6 +512,7 @@ class AirplaneGame:
     def _fire_bullets(self):
         if not self.player or self.lives <= 0:
             return
+        soundfx and soundfx.play("shoot")
 
         x, y = self.player["x"], self.player["y"]
         speed = BULLET_SPEED
@@ -597,31 +604,53 @@ class AirplaneGame:
 
     def _create_enemy(self, x, y, speed, hp, points, size, color, etype):
         # Draw based on type
+        s = size
         if etype == "triangle":
-            points_list = [x, y - size, x + size, y + size * 0.6, x - size, y + size * 0.6]
-        elif etype == "diamond":
+            # Basic enemy - small fighter plane
             points_list = [
-                x, y - size, x + size * 0.7, y,
-                x, y + size, x - size * 0.7, y
+                x, y - s,              # nose
+                x + s*0.7, y - s*0.2,  # right wing tip
+                x + s*0.6, y + s*0.3,  # right body
+                x + s*0.3, y + s*0.7,  # right tail
+                x - s*0.3, y + s*0.7,  # left tail
+                x - s*0.6, y + s*0.3,  # left body
+                x - s*0.7, y - s*0.2,  # left wing tip
+            ]
+        elif etype == "diamond":
+            # Fast enemy - sleek delta wing plane
+            points_list = [
+                x, y - s * 1.0,              # sharp nose
+                x + s * 0.3, y - s * 0.3,    # right inner wing
+                x + s * 0.7, y + s * 0.0,    # right delta wing
+                x + s * 0.5, y + s * 0.2,    # right body
+                x + s * 0.3, y + s * 0.7,    # right tail
+                x + s * 0.1, y + s * 0.9,    # right tail cone
+                x - s * 0.1, y + s * 0.9,    # left tail cone
+                x - s * 0.3, y + s * 0.7,    # left tail
+                x - s * 0.5, y + s * 0.2,    # left body
+                x - s * 0.7, y + s * 0.0,    # left delta wing
+                x - s * 0.3, y - s * 0.3,    # left inner wing
             ]
         elif etype == "hexagon":
-            pts = []
-            for i in range(6):
-                angle = math.radians(60 * i)
-                pts.extend([
-                    x + size * math.cos(angle),
-                    y + size * math.sin(angle)
-                ])
-            points_list = pts
+            # Tank enemy - heavy bomber
+            points_list = [
+                x, y - s*0.7,          # nose
+                x + s*0.8, y - s*0.1,  # right wing
+                x + s, y + s*0.2,      # right wing tip
+                x + s*0.7, y + s*0.4,  # right body
+                x + s*0.5, y + s,      # right tail
+                x - s*0.5, y + s,      # left tail
+                x - s*0.7, y + s*0.4,  # left body
+                x - s, y + s*0.2,      # left wing tip
+                x - s*0.8, y - s*0.1,  # left wing
+            ]
         elif etype == "boss":
+            # Boss - large octagonal star
             pts = []
             for i in range(8):
                 angle = math.radians(45 * i)
-                r = size if i % 2 == 0 else size * 0.7
-                pts.extend([
-                    x + r * math.cos(angle),
-                    y + r * math.sin(angle)
-                ])
+                r = size if i % 2 == 0 else size * 0.6
+                pts.extend([x + r * math.cos(angle), y + r * math.sin(angle)])
             points_list = pts
         else:
             points_list = [x, y - size, x + size, y + size, x - size, y + size]
@@ -683,22 +712,34 @@ class AirplaneGame:
         ptype = random.choice(["P", "S", "L"])
         color = POWERUP_COLORS[ptype]
 
-        cid = self.canvas.create_oval(
-            x - 10, y - 10, x + 10, y + 10,
-            fill=color, outline="#ffffff",
+        # Bright outer glow ring
+        glow = self.canvas.create_oval(
+            x - 18, y - 18, x + 18, y + 18,
+            outline=color, width=4, dash=(6, 3),
+            tags="powerup"
+        )
+        # Star shape
+        pts = []
+        for i in range(8):
+            angle = math.radians(45 * i - 22.5)
+            r = 14 if i % 2 == 0 else 6
+            pts.extend([x + r * math.cos(angle), y + r * math.sin(angle)])
+        star = self.canvas.create_polygon(
+            pts, fill=color, outline="#ffffff",
             width=2, tags="powerup"
         )
         # Label
         label = self.canvas.create_text(
             x, y, text=ptype,
-            fill="#ffffff", font=("Courier", 10, "bold"),
+            fill="#ffffff", font=("Courier", 14, "bold"),
             tags="powerup"
         )
 
         self.powerups.append({
             "x": x, "y": y, "type": ptype,
             "vy": 1.5,
-            "id": cid, "label_id": label,
+            "id": star, "label_id": label, "glow_id": glow,
+            "timer": 0,
         })
 
     # ── Explosions / Effects ────────────────────────────────
@@ -793,6 +834,7 @@ class AirplaneGame:
                             bonus_text = f" +{bonus}x{combo_bonus}"
 
                         # Effects
+                        soundfx and soundfx.play("explosion")
                         self._create_explosion(ex, ey, e["color"], e["size"])
                         self._create_float_text(
                             ex, ey - 10,
@@ -842,6 +884,7 @@ class AirplaneGame:
                     break
 
     def _player_hit(self):
+        soundfx and soundfx.play("hit")
         if self.shield_active:
             self.shield_active = False
             self.shield_timer = 0
@@ -882,6 +925,7 @@ class AirplaneGame:
             self.lives = min(self.lives + 1, 5)
             self._create_float_text(p["x"], p["y"] - 5, "1UP!", "#44ff88")
 
+        soundfx and soundfx.play("powerup")
         self._remove_powerup(p)
         self._update_hud()
 
@@ -918,16 +962,12 @@ class AirplaneGame:
         if p is None or p not in self.powerups:
             return
         self.powerups.remove(p)
-        if p["id"]:
-            try:
-                self.canvas.delete(p["id"])
-            except tk.TclError:
-                pass
-        if p["label_id"]:
-            try:
-                self.canvas.delete(p["label_id"])
-            except tk.TclError:
-                pass
+        for key in ["id", "label_id", "glow_id"]:
+            if p.get(key):
+                try:
+                    self.canvas.delete(p[key])
+                except tk.TclError:
+                    pass
 
     # ── Update Logic ────────────────────────────────────────
 
@@ -1049,16 +1089,16 @@ class AirplaneGame:
             if e["type"] == "boss" and e["timer"] % 60 == 0:
                 self._create_enemy_bullet(
                     e["x"], e["y"] + e["size"],
-                    0, 3
+                    0, 12
                 )
-                # Spread shot
+                # Spread shot 2x speed
                 self._create_enemy_bullet(
                     e["x"], e["y"] + e["size"],
-                    -0.8, 2.8
+                    -0.8, 11.2
                 )
                 self._create_enemy_bullet(
                     e["x"], e["y"] + e["size"],
-                    0.8, 2.8
+                    0.8, 11.2
                 )
             e["timer"] += 1
 
@@ -1072,13 +1112,24 @@ class AirplaneGame:
                 self._remove_powerup(p)
                 continue
 
-            # Pulsing effect
-            pulse = math.sin(self._game_time * 0.005) * 2
-            r = 10 + pulse
+            # Rotating star + pulsing glow
+            p["timer"] += 0.1
+            pulse = 14 + math.sin(self._game_time * 0.006) * 3
+
+            # Redraw star with rotation
+            pts = []
+            for i in range(8):
+                angle = math.radians(45 * i - 22.5 + p["timer"] * 30)
+                r = pulse if i % 2 == 0 else pulse * 0.4
+                pts.extend([p["x"] + r * math.cos(angle), p["y"] + r * math.sin(angle)])
+            self.canvas.coords(p["id"], *pts)
+
+            # Pulsing glow ring
+            glow_r = 20 + math.sin(self._game_time * 0.004) * 3
             self.canvas.coords(
-                p["id"],
-                p["x"] - r, p["y"] - r,
-                p["x"] + r, p["y"] + r
+                p["glow_id"],
+                p["x"] - glow_r, p["y"] - glow_r,
+                p["x"] + glow_r, p["y"] + glow_r
             )
             self.canvas.coords(p["label_id"], p["x"], p["y"])
 
@@ -1142,20 +1193,61 @@ class AirplaneGame:
         if e["flash"] > 0:
             color = "#ffffff"
 
+        s = size
         if etype == "triangle":
-            pts = [x, y - size, x + size, y + size * 0.6, x - size, y + size * 0.6]
+            # Small fighter plane - swept wings, pointed nose, double tail fins
+            pts = [
+                x, y - s * 1.0,              # nose tip
+                x + s * 0.6, y - s * 0.2,    # right wing tip
+                x + s * 0.4, y + s * 0.2,    # right body mid
+                x + s * 0.25, y + s * 0.7,   # right tail wing tip
+                x + s * 0.1, y + s * 0.8,    # right tail
+                x - s * 0.1, y + s * 0.8,    # left tail
+                x - s * 0.25, y + s * 0.7,   # left tail wing tip
+                x - s * 0.4, y + s * 0.2,    # left body mid
+                x - s * 0.6, y - s * 0.2,    # left wing tip
+            ]
         elif etype == "diamond":
-            pts = [x, y - size, x + size * 0.7, y, x, y + size, x - size * 0.7, y]
+            # Fast enemy - needle-like dart fighter
+            pts = [
+                x, y - s * 1.3,              # sharp nose
+                x + s * 0.15, y - s * 0.4,   # right nose
+                x + s * 0.5, y - s * 0.1,    # right wing
+                x + s * 0.7, y + s * 0.2,    # right wing outer
+                x + s * 0.45, y + s * 0.4,   # right body
+                x + s * 0.25, y + s * 0.8,   # right tail
+                x + s * 0.08, y + s * 0.95,  # right tail cone
+                x - s * 0.08, y + s * 0.95,  # left tail cone
+                x - s * 0.25, y + s * 0.8,   # left tail
+                x - s * 0.45, y + s * 0.4,   # left body
+                x - s * 0.7, y + s * 0.2,    # left wing outer
+                x - s * 0.5, y - s * 0.1,    # left wing
+                x - s * 0.15, y - s * 0.4,   # left nose
+            ]
         elif etype == "hexagon":
-            pts = []
-            for i in range(6):
-                angle = math.radians(60 * i)
-                pts.extend([x + size * math.cos(angle), y + size * math.sin(angle)])
+            # Tank enemy - heavy bomber with distinct wings
+            pts = [
+                x, y - s * 1.0,              # nose
+                x + s * 0.15, y - s * 0.4,   # right cockpit
+                x + s * 0.7, y - s * 0.15,   # right wing inner
+                x + s * 1.3, y + s * 0.2,    # right wing tip
+                x + s * 1.0, y + s * 0.35,   # right wing back
+                x + s * 0.6, y + s * 0.5,    # right body
+                x + s * 0.5, y + s * 1.0,    # right tail fin
+                x + s * 0.15, y + s * 1.2,   # right tail
+                x - s * 0.15, y + s * 1.2,   # left tail
+                x - s * 0.5, y + s * 1.0,    # left tail fin
+                x - s * 0.6, y + s * 0.5,    # left body
+                x - s * 1.0, y + s * 0.35,   # left wing back
+                x - s * 1.3, y + s * 0.2,    # left wing tip
+                x - s * 0.7, y - s * 0.15,   # left wing inner
+                x - s * 0.15, y - s * 0.4,   # left cockpit
+            ]
         elif etype == "boss":
             pts = []
             for i in range(8):
                 angle = math.radians(45 * i)
-                r = size if i % 2 == 0 else size * 0.7
+                r = size if i % 2 == 0 else size * 0.6
                 pts.extend([x + r * math.cos(angle), y + r * math.sin(angle)])
         else:
             pts = [x, y - size, x + size, y + size, x - size, y + size]
@@ -1166,17 +1258,39 @@ class AirplaneGame:
         except tk.TclError:
             pass
 
-        # Boss inner star
-        if etype == "boss" and e.get("inner_id"):
-            inner_pts = []
-            for i in range(8):
-                angle = math.radians(45 * i)
-                r = (size * 0.5) if i % 2 == 0 else (size * 0.35)
-                inner_pts.extend([x + r * math.cos(angle), y + r * math.sin(angle)])
+        # Boss - large command ship with airplane shape
+        if etype == "boss":
+            # Swept wings, canards, twin tail fins
+            boss_pts = [
+                x, y - s * 1.2,              # nose
+                x + s * 0.3, y - s * 0.7,    # right canard
+                x + s * 0.6, y - s * 0.5,    # right wing inner
+                x + s * 1.3, y + s * 0.0,    # right wing tip
+                x + s * 1.0, y + s * 0.25,   # right wing back
+                x + s * 0.7, y + s * 0.5,    # right body
+                x + s * 0.6, y + s * 0.7,    # right outer engine
+                x + s * 0.3, y + s * 0.8,    # right engine
+                x + s * 0.5, y + s * 1.3,    # right tail outer
+                x + s * 0.15, y + s * 1.4,   # right tail
+                x + s * 0.05, y + s * 1.3,   # right tail inner
+                x - s * 0.05, y + s * 1.3,   # left tail inner
+                x - s * 0.15, y + s * 1.4,   # left tail
+                x - s * 0.5, y + s * 1.3,    # left tail outer
+                x - s * 0.3, y + s * 0.8,    # left engine
+                x - s * 0.6, y + s * 0.7,    # left outer engine
+                x - s * 0.7, y + s * 0.5,    # left body
+                x - s * 1.0, y + s * 0.25,   # left wing back
+                x - s * 1.3, y + s * 0.0,    # left wing tip
+                x - s * 0.6, y - s * 0.5,    # left wing inner
+                x - s * 0.3, y - s * 0.7,    # left canard
+            ]
             try:
-                self.canvas.coords(e["inner_id"], *inner_pts)
+                self.canvas.coords(e["id"], *boss_pts)
+                self.canvas.itemconfig(e["id"], fill=color)
             except tk.TclError:
                 pass
+
+        # Remove old inner star
 
         # HP bar for tank/boss
         if e["max_hp"] > 1 and e["hp"] > 0:

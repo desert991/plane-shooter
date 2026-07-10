@@ -10,7 +10,8 @@ A vertical scrolling shooter game built with Python and Tkinter, running nativel
 |-----------|-------------|
 | ← → ↑ ↓   | 移动飞机 / Move |
 | W A S D   | 移动飞机 / Move |
-| Space     | 发射子弹 / Fire |
+| Space     | 额外火力 / Extra Fire |
+| -         | 自动射击 / Auto-fire |
 | P         | 暂停 / Pause |
 | R         | 暂停时继续 / Resume |
 
@@ -29,18 +30,18 @@ python3 game.py
 
 | 类型 | 外观 | 分值 | 特点 |
 |------|------|------|------|
-| 轻敌 | 红色三角形 | 100 | 直线下落 |
-| 侦察机 | 橙色菱形 | 150 | 蛇形移动 |
-| 重装兵 | 紫色六边形 | 250 | 2 条命 |
-| Boss | 红色大圆 | 1000 | 高血量，会反击 |
+| 轻敌 | 红色战斗机 | 100 | 直线下落 |
+| 侦察机 | 橙色高速机 | 150 | 蛇形移动 |
+| 重装兵 | 紫色轰炸机 | 250 | 2 条命 |
+| Boss | 红色巨型星舰 | 1000 | 高血量，会反击 |
 
 ## 道具类型 / Power-up Types
 
 | 图标 | 效果 |
 |------|------|
-| P (橙色) | 武器升级 / Weapon upgrade |
-| S (蓝色) | 护盾 / Shield |
-| L (绿色) | 额外一条命 / Extra life |
+| P (橙色星) | 武器升级 / Weapon upgrade |
+| S (蓝色星) | 护盾 / Shield |
+| L (绿色星) | 额外一条命 / Extra life |
 
 ## 最高分 / High Score
 
@@ -61,5 +62,23 @@ This project is designed to practice GitHub workflows:
 3. Create branches for experimentation
 4. Push to GitHub remote
 5. Manage Pull Requests and Issues
+
+## 音效与音乐 / Sound & Music
+
+- 射击、爆炸、拾取道具、受击均有音效
+- 背景音乐在游戏开始时自动播放
+- 使用 macOS 系统 `afplay` 命令播放
+- 音效文件存放在 `sounds/` 目录下
+
+## 更新日志 / Changelog
+
+- 修复 BUG: 暂停恢复时清空按键状态
+- 修复 BUG: 8位色值不支持问题
+- 调整: 子弹速度提高 (8 -> 14)
+- 调整: 玩家移动速度提高 (5 -> 8)
+- 调整: 自动射击 (无需按 Space)
+- 新增: 敌机采用飞机形状绘制
+- 新增: 道具改为旋转星星 + 发光效果
+- 新增: 音效和背景音乐
 
 🎮 GitHub 仓库: [desert991/plane-shooter](https://github.com/desert991/plane-shooter)
