@@ -92,8 +92,9 @@ function resize(){
 }
 // Font scaling: ensure readable text at any canvas size
 function fz(px){
-  const s = Math.round(px * (W / 800) * 0.7);
-  return Math.max(s, Math.round(px * 0.7));
+  const scale = Math.min(1, W/800);
+  const boosted = Math.round(px / Math.max(scale, 0.3) * 0.55);
+  return Math.max(px, boosted);
 }
 window.addEventListener('resize', resize); resize();
 const BASE_FIRE_DELAY = 250;
@@ -965,7 +966,7 @@ function draw(){
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#888899';
-  ctx.fillText(`HIGH: ${G.highScore}`, W-20, HUD_H/2);
+  ctx.fillText(`HIGH: ${G.highScore}`, W-52, HUD_H/2);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = COLORS.hudText;
@@ -1195,7 +1196,7 @@ canvas.addEventListener("touchstart", (e)=>{
     return;
   }
   touchActive = true;
-  if(G.player&&G.state==="playing"){G.player.tx=p.x; G.player.ty=p.y;}
+  if(G.player&&G.state==="playing"){G.player.tx=p.x; G.player.ty=p.y-Math.round(60*SZ);}
   const hint = document.getElementById("touch-hint");
   if(hint){hint.style.display="block"; setTimeout(()=>{hint.style.display="none";},3000);}
 },{passive:false});
@@ -1203,7 +1204,7 @@ canvas.addEventListener("touchmove", (e)=>{
   e.preventDefault();
   if(!touchActive||!G.player||G.state!=="playing") return;
   const p = handleTouchPos(e); if(!p) return;
-  G.player.tx=p.x; G.player.ty=p.y;
+  G.player.tx=p.x; G.player.ty=p.y-Math.round(60*SZ);
 },{passive:false});
 canvas.addEventListener("touchend",(e)=>{
   e.preventDefault();
